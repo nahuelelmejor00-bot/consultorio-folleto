@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+  body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #111;
+  margin: 0;
+}
+
+.book-container {
+  perspective: 1500px; /* Profundidad 3D */
+}
+
+.book {
+  width: 420px;
+  height: 600px;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.page {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  object-fit: contain;
+  border-radius: 8px;
+  transform-origin: left center;
+  display: none;
+  transform: rotateY(0);
+  transition: tranform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  
+  /* Punto de pivote: el borde izquierdo (como un libro) */
+  transform-origin: left center; 
+  
+  /* Por defecto, todas ocultas para que no interfieran */
+  display: none;
+  transform: rotateY(0deg);
+  transition: transform 0.6s ease-in-out, opacity 0.6s;
+}
+
+/* La página que el usuario ve actualmente */
+.page.active {
+  display: block;
+  z-index: 2;
+}
+
+/* La página que se prepara abajo para ser revelada */
+.page.underneath {
+  display: block;
+  z-index: 1;
+}
+
+/* Animación: la imagen actual se levanta a 90° (o más) y se desvanece */
+.page.exit {
+  transform: rotateY(-100deg); /* Un poco más de 90° para asegurar el rebasado */
+  opacity: 0;
+}
+.shadow-layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: rgba(0,0,0,0.85);
+    z-index: 2;
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+
+}
+.shadow-layer.active {
+    opacity: 1;
+}
+
+.nav-btn {
+  position: absolute;
+  bottom: 25px;       /* Subimos un poquito la posición para que luzcan mejor */
+  width: 75px;        /* Aumentado de 55px a 75px para que sean más grandes */
+  height: 75px;       /* Mantenemos el alto igual para que sea proporcional */
+  border: none;
+  background: none;   
+  padding: 0;
+  cursor: pointer;
+  z-index: 10;        
+  
+  opacity: 0.5;       /* Hace los botones 50% transparentes por defecto */
+  transition: transform 0.2s ease, opacity 0.2s ease; /* Transición suave de tamaño y transparencia */
+}
+
+/* Fuerza a la imagen a encajar en el nuevo tamaño grande */
+.nav-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; 
+  display: block;
+}
+
+/* EFECTO HOVER: Cuando el mouse se sitúa sobre el botón */
+.nav-btn:hover {
+  opacity: 1;         /* Se vuelve 100% sólido (quita la transparencia) */
+  transform: scale(1.08); /* Se agranda ligeramente de forma sutil */
+}
+
+/* EFECTO ACTIVE: Cuando se presiona o se hace clic */
+.nav-btn:active {
+  opacity: 1;
+  transform: scale(0.92); /* Se encoge un poco dando efecto de pulsación */
+}
+
+/* Esquina inferior izquierda (Boton 1 - Atrás) */
+.prev-btn {
+  left: 15px;         /* Ajustado proporcional al nuevo tamaño */
+}
+
+/* Esquina inferior derecha (Boton 2 - Siguiente) */
+.next-btn {
+  right: 15px;        /* Ajustado proporcional al nuevo tamaño */
+}
+
+  
+    </style>
+</head>
+<body>
+ <div class="book-container">
+    <div class="book">
+        <div class="shadow-layer" id="shadowLayer"></div>
+      <!-- Añade tus imágenes aquí. La primera empieza con la clase 'active' -->
+      <img src="imagen1.jpg" class="page active" alt="Imagen 1">
+      <img src="imagen2.jpg" class="page" alt="Imagen 2">
+      <img src="imagen3.jpg" class="page" alt="Imagen 3">
+      <img src="imagen4.jpg" class="page" alt="Imagen 4">
+
+      <button class="nav-btn prev-btn" onclick="prevPage()" aria-label="Anterior">
+        <img src="boton1.png" alt="Flecha izquierda">
+      </button>
+      <button class="nav-btn next-btn" onclick="nextPage()" aria-label="Siguiente">
+        <img src="boton2.png" alt="Flecha Derecha">
+      </button>
+    </div>
+  </div>
+
+  
+
+
+  <script>
+ const pages = document.querySelectorAll('.page');
+const shadowLayer = document.getElementById('shadowLayer');
+let currentIndex = 0;
+let isAnimating = false;
+
+function nextPage() {
+  if (isAnimating || currentIndex >= pages.length - 1) return;
+  isAnimating = true;
+
+  const currentPage = pages[currentIndex];
+  const nextPage = pages[currentIndex + 1];
+
+  // 1. Posicionamos la siguiente imagen abajo
+  nextPage.classList.add('underneath');
+
+  // 2. Encendemos la sombra sobre la página de abajo
+  shadowLayer.style.transition = 'none';
+  shadowLayer.classList.add('active');
+  shadowLayer.offsetHeight; // Forzar reflow
+  
+  // 3. Iniciamos el movimiento de la hoja y desvanecemos la sombra simultáneamente
+  shadowLayer.style.transition = '';
+  shadowLayer.classList.remove('active');
+  currentPage.classList.add('exit');
+
+  // 4. AL LLEGAR A LOS 90° (Fin de los 600ms): Desaparición fulminante de la imagen actual
+  setTimeout(() => {
+    currentPage.classList.remove('active', 'exit');
+    nextPage.classList.remove('underneath');
+    nextPage.classList.add('active'); // La de abajo pasa a ser la principal
+    
+    currentIndex++;
+    isAnimating = false;
+  }, 700); // Sincronizado con los 0.6s del CSS
+}
+
+function prevPage() {
+  if (isAnimating || currentIndex <= 0) return;
+  isAnimating = true;
+
+  const currentPage = pages[currentIndex];
+  const prevPage = pages[currentIndex - 1];
+
+  // 1. Colocamos la página anterior fija a 90° oculta de canto
+  prevPage.style.transition = 'none';
+  prevPage.classList.add('exit', 'active');
+  
+  // Ponemos la sombra en modo transparente
+  shadowLayer.style.transition = 'none';
+  shadowLayer.classList.remove('active');
+  prevPage.offsetHeight; // Forzar reflow
+
+  // 2. Traemos la hoja de regreso desde los 90° a 0° y oscurecemos su sombra proyectada
+  prevPage.style.transition = '';
+  shadowLayer.style.transition = '';
+  prevPage.classList.remove('exit');
+  shadowLayer.classList.add('active');
+
+  // 3. Al cerrarse el libro por completo, limpiamos los estados
+  setTimeout(() => {
+    currentPage.classList.remove('active');
+    shadowLayer.classList.remove('active');
+    currentIndex--;
+    isAnimating = false;
+  }, 500);
+}
+
+  </script>
+</body>
+</html>
